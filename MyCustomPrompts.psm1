@@ -67,7 +67,7 @@ $DynPrmpt = @{
 }
 
 $MyCustomPrompts = @{
-    Standard = {
+    Std = {
         $prefix = @(
             if (Test-Path variable:/PSDebugContext) {'[DBG]'}
             if ($isAdmin) {'[ADMIN]'}
@@ -83,7 +83,7 @@ $MyCustomPrompts = @{
         "${prefix}${body}${suffix} "
     }
 
-    Demo = {
+    Dem = {
         $prefix = @(
             if (Test-Path variable:/PSDebugContext) {'[DBG]'}
             if ($isAdmin) {'[ADMIN]'}
@@ -117,7 +117,7 @@ $MyCustomPrompts = @{
         "${prefix}${body}${suffix} "
     }
 
-    Jobs = {
+    Job = {
         $prefix = @(
             if (Test-Path variable:/PSDebugContext) {'[DBG]'}
             if ($isAdmin) {'[ADMIN]'}
@@ -151,7 +151,7 @@ $MyCustomPrompts = @{
         "${prefix}${body}${suffix} "
     }
 
-    Project = {
+    Prj = {
         $prefix = @(
             if (Test-Path variable:/PSDebugContext) {'[DBG]'}
             if ($isAdmin) {'[ADMIN]'}
@@ -168,7 +168,7 @@ $MyCustomPrompts = @{
         "${prefix}${body}${suffix} "
     }
 
-    Dynamic = {
+    Dyn = {
         if (Test-Path -Path $DynPrmpt.CfgPth) {
             $DynPrmpt.Cfg ??= Get-Content -Path $DynPrmpt.CfgPth | ConvertFrom-Json
             if ($DynPrmpt.LstPth -ne $PWD.Path) {
@@ -212,13 +212,13 @@ function Set-MyCustomPrompt {
     [OutputType([void])]
     param (
         [ValidateSet(
-            'Standard',
-            'Demo',
+            'Std',
+            'Dem',
             'Dev',
-            'Jobs',
+            'Job',
             'Log',
-            'Project',
-            'Dynamic'
+            'Prj',
+            'Dyn'
         )]
         [Parameter(
             Mandatory = $true,
@@ -241,9 +241,8 @@ function Set-MyCustomPrompt {
 }
 
 function Reset-ToOriginalPrompt {
-    [CmdletBinding(
-        SupportsShouldProcess
-    )]
+    [CmdletBinding(SupportsShouldProcess)]
+    [OutputType([void])]
     param ()
     $originalSB = [scriptblock]::Create($OriginalPrompt)
     if($PSCmdlet.ShouldProcess(
