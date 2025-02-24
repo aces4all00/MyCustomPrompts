@@ -1,22 +1,20 @@
-$null = if (($Function:prompt) -and ($null -eq $Global:OriginalPrompt)) {
+$null = if (($Function:prompt) -and ($null -eq $OriginalPrompt)) {
     $nv = @{
         Name = 'OriginalPrompt'
         Description = "Default prompt scriptblock as string"
-        Scope = 'Global'
-        Option = 'Constant'
+        Option = 'ReadOnly'
         Value = $Function:prompt.ToString()
     }
-    New-Variable @nv
+    New-Variable @nv -Option ReadOnly
     $nv.Clear()
 } else {
     $null
 }
 
-$null = if ($null -eq $Global:ShortPSVersion) {
+$null = if ($null -eq $ShortPSVersion) {
     $nv = @{
         Name = 'ShortPSVersion'
-        Scope = 'Global'
-        Option = 'Constant'
+        Option = 'ReadOnly'
         Value = & {'{0}.{1}' -f @(
             $PSVersionTable.PSVersion.Major, $PSVersionTable.PSVersion.Minor
         )}
@@ -27,11 +25,10 @@ $null = if ($null -eq $Global:ShortPSVersion) {
     $null
 }
 
-$null = if ($null -eq $Global:IsAdmin) {
+$null = if ($null -eq $IsAdmin) {
     $nv = @{
         Name = 'IsAdmin'
-        Scope = 'Global'
-        Option = 'Constant'
+        Option = 'ReadOnly'
         Value = & {
             if ($IsWindows) {
                 $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -46,18 +43,41 @@ $null = if ($null -eq $Global:IsAdmin) {
     $null
 }
 
+$DtmFmt = @{
+    Full = 'yyyy-MM-dd HH:mm:ss'
+    Date = 'yyyy-MM-dd'
+    ShortDate = 'MM-dd'
+    Year = 'yyyy'
+    Month = 'MM'
+    MonthName = 'MMMM'
+    MonthShort = 'MMM'
+    Day = 'dd'
+    DayName = 'dddd'
+    DayShort = 'ddd'
+    Time = 'HH:mm:ss'
+    TimeExt = 'HH:mm:ss.fff'
+    TimeShort = 'HH:mm'
+    Timestamp = 'yyyyMMddHHmmssfff'
+}
+
+$DynPrmpt = @{
+    CfgPth = '.\DynamicPrompt.cfg'
+    Cfg = $null
+    LstPth = [string]::Empty
+}
+
 $MyCustomPrompts = @{
     Standard = {
         $prefix = @(
             if (Test-Path variable:/PSDebugContext) {'[DBG]'}
             if ($isAdmin) {'[ADMIN]'}
         ) -join ''
-        
+
         $body = @(
-            '[PS{0}]' -f $Global:ShortPSVersion
+            "[PS $ShortPSVersion]"
             $PWD.Path
         ) -join ' '
-        
+
         $suffix = ([string[]]@('>') * ($NestedPromptLevel + 1)) -join ''
 
         "${prefix}${body}${suffix} "
@@ -69,12 +89,12 @@ $MyCustomPrompts = @{
             if ($isAdmin) {'[ADMIN]'}
             '[Demo]'
         ) -join ''
-        
+
         $body = @(
-            '[PS{0}]' -f $Global:ShortPSVersion
+            "[PS $ShortPSVersion]"
             $PWD.Path
         ) -join ' '
-        
+
         $suffix = ([string[]]@('>') * ($NestedPromptLevel + 1)) -join ''
 
         "${prefix}${body}${suffix} "
@@ -86,12 +106,12 @@ $MyCustomPrompts = @{
             if ($isAdmin) {'[ADMIN]'}
             '[Dev]'
         ) -join ''
-        
+
         $body = @(
-            '[PS{0}]' -f $Global:ShortPSVersion
+            "[PS $ShortPSVersion]"
             $PWD.Path
         ) -join ' '
-        
+
         $suffix = ([string[]]@('>') * ($NestedPromptLevel + 1)) -join ''
 
         "${prefix}${body}${suffix} "
@@ -103,12 +123,12 @@ $MyCustomPrompts = @{
             if ($isAdmin) {'[ADMIN]'}
             '[Jobs]'
         ) -join ''
-        
+
         $body = @(
-            '[PS{0}]' -f $Global:ShortPSVersion
+            "[PS $ShortPSVersion]"
             $PWD.Path
         ) -join ' '
-        
+
         $suffix = ([string[]]@('>') * ($NestedPromptLevel + 1)) -join ''
 
         "${prefix}${body}${suffix} "
@@ -120,12 +140,12 @@ $MyCustomPrompts = @{
             if ($isAdmin) {'[ADMIN]'}
             '[Log]'
         ) -join ''
-        
+
         $body = @(
-            '[PS{0}]' -f $Global:ShortPSVersion
+            "[PS $ShortPSVersion]"
             $PWD.Path
         ) -join ' '
-        
+
         $suffix = ([string[]]@('>') * ($NestedPromptLevel + 1)) -join ''
 
         "${prefix}${body}${suffix} "
@@ -137,19 +157,59 @@ $MyCustomPrompts = @{
             if ($isAdmin) {'[ADMIN]'}
             '[Proj]'
         ) -join ''
-        
+
         $body = @(
-            '[PS{0}]' -f $Global:ShortPSVersion
+            "[PS $ShortPSVersion]"
             $PWD.Path
         ) -join ' '
-        
+
         $suffix = ([string[]]@('>') * ($NestedPromptLevel + 1)) -join ''
 
         "${prefix}${body}${suffix} "
     }
+
+    Dynamic = {
+        if (Test-Path -Path $DynPrmpt.CfgPth) {
+            $DynPrmpt.Cfg ??= Get-Content -Path $DynPrmpt.CfgPth | ConvertFrom-Json
+            if ($DynPrmpt.LstPth -ne $PWD.Path) {
+                $dtm = [datetime]::Now
+                $utc = [datetime]::UtcNow
+                $DynPrmpt.LstPth = $PWD.Path
+                & {Clear-Host}
+                $msg = @(
+                    if ($DynPrmpt.Cfg.ShowName) {"Name: $($DynPrmpt.Cfg.Name)"}
+                    if ($DynPrmpt.Cfg.ShowMode) {"Mode: $($DynPrmpt.Cfg.Mode)"}
+                    if ($DynPrmpt.Cfg.ShowDate) {"Date: $($dtm.ToString($DtmFmt.Date))"}
+                    if ($DynPrmpt.Cfg.ShowTime) {"Time: $($dtm.ToString($DtmFmt.Time))"}
+                    if ($DynPrmpt.Cfg.ShowUTC) {"UTC : $($utc.ToString($DtmFmt.Full))"}
+                )
+                Write-Information -MessageData "$($msg -join "`n")`n" -InformationAction Continue
+            }
+            $prefix = @(
+                if (Test-Path variable:/PSDebugContext) {'[DBG]'}
+                if ($isAdmin) {'[ADMIN]'}
+                "[$($DynPrmpt.Cfg.Mode)]"
+            ) -join ''
+        } else {
+            $DynPrmpt = @{
+                CfgPth = '.\DynamicPrompt.cfg'
+                Cfg = $null
+                LstPth = [string]::Empty
+            }
+
+            $prefix = @(
+                if (Test-Path variable:/PSDebugContext) {'[DBG]'}
+                if ($isAdmin) {'[ADMIN]'}
+            ) -join ''
+        }
+
+        "${prefix}PS $($PWD.Path)" + (">" * ($NestedPromptLevel +1))
+    }
 }
 
 function Set-MyCustomPrompt {
+    [CmdletBinding(SupportsShouldProcess)]
+    [OutputType([void])]
     param (
         [ValidateSet(
             'Standard',
@@ -157,7 +217,8 @@ function Set-MyCustomPrompt {
             'Dev',
             'Jobs',
             'Log',
-            'Project'
+            'Project',
+            'Dynamic'
         )]
         [Parameter(
             Mandatory = $true,
@@ -168,20 +229,38 @@ function Set-MyCustomPrompt {
     )
 
     if ($MyCustomPrompts[$CustomPrompt]) {
-        $Function:prompt = $MyCustomPrompts[$CustomPrompt].GetNewClosure()
+        if ($PSCmdlet.ShouldProcess(
+            'PowerShell prompt',
+            "Sets PowerShell prompt to custom '$CustomPrompt' prompt"
+        )) {
+            $Function:prompt = $MyCustomPrompts[$CustomPrompt].GetNewClosure()
+        }
     } else {
         Write-Error -Message "Aborting: Custom prompt '$CustomPrompt' does not exist"
     }
 }
 
 function Reset-ToOriginalPrompt {
+    [CmdletBinding(
+        SupportsShouldProcess
+    )]
     param ()
-    $originalSB = [scriptblock]::Create($Global:OriginalPrompt)
-    $Function:prompt = $originalSB
+    $originalSB = [scriptblock]::Create($OriginalPrompt)
+    if($PSCmdlet.ShouldProcess(
+        'PowerShell prompt',
+        "Sets PowerShell prompt to back to original"
+    )) {
+        $Function:prompt = $originalSB
+    }
 }
 
 Export-ModuleMember -Variable @(
     'MyCustomPrompts'
+    'OriginalPrompt'
+    'ShortPSVersion'
+    'IsAdmin'
+    'DtmFmt'
+    'DynPrmpt'
 ) -Function @(
     'Set-MyCustomPrompt'
     'Reset-ToOriginalPrompt'
