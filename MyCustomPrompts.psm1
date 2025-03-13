@@ -61,7 +61,7 @@ $DtmFmt = @{
 }
 
 $DynPrmpt = @{
-    CfgPth = '.\DynamicPrompt.cfg'
+    CfgPth = '.\data\DynamicPrompt.cfg'
     Cfg = $null
     LstPth = [string]::Empty
 }
@@ -188,14 +188,12 @@ $MyCustomPrompts = @{
             $prefix = @(
                 if (Test-Path variable:/PSDebugContext) {'[DBG]'}
                 if ($isAdmin) {'[ADMIN]'}
-                "[$($DynPrmpt.Cfg.Mode)]"
+                if ($DynPrmpt.Cfg.ShowMode) {"[$($DynPrmpt.Cfg.Mode)]"}
             ) -join ''
         } else {
-            $DynPrmpt = @{
-                CfgPth = '.\DynamicPrompt.cfg'
-                Cfg = $null
-                LstPth = [string]::Empty
-            }
+            $DynPrmpt.CfgPth = '.\data\DynamicPrompt.cfg'
+            $DynPrmpt.Cfg = $null
+            $DynPrmpt.LstPth = [string]::Empty
 
             $prefix = @(
                 if (Test-Path variable:/PSDebugContext) {'[DBG]'}
@@ -203,7 +201,7 @@ $MyCustomPrompts = @{
             ) -join ''
         }
 
-        "${prefix}PS $($PWD.Path)" + (">" * ($NestedPromptLevel +1))
+        "${prefix}[PS $ShortPSVersion] $($PWD.Path)" + (">" * ($NestedPromptLevel +1))
     }
 }
 
@@ -233,9 +231,11 @@ function Set-MyCustomPrompt {
             'PowerShell prompt',
             "Sets PowerShell prompt to custom '$CustomPrompt' prompt"
         )) {
+            Reset-ToOriginalPrompt
             $Function:prompt = $MyCustomPrompts[$CustomPrompt].GetNewClosure()
         }
     } else {
+        Reset-ToOriginalPrompt
         Write-Error -Message "Aborting: Custom prompt '$CustomPrompt' does not exist"
     }
 }
